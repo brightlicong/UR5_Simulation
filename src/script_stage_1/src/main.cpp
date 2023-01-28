@@ -1,37 +1,50 @@
 #include <iostream>
 #include <ros/ros.h>
 #include <array>
-#include <std_msgs/String.h>
+#include <vector>
+#include <std_msgs/UInt8.h> //builtin_uint8 or UInt8
+#include <std_msgs/Float64MultiArray.h>
 #include <string>
 
-void printUR5JointsInfo(){
-    std::cout << "UR5 Joints Info :" << std::endl;
-}
+ros::Publisher client_target_pose;
+ros::Publisher client_command;
 
-void analyseFeedback(const std_msgs::String& state){
-    std::cout << "[INFO] Feedback is " << state << std::endl;
-}
+void analyseFeedback(const std_msgs::UInt8& state);
 
 int main(int argc, char** argv){
     std::cout << "Here is a simple demo for ROS and CoppeliaSim" << std::endl;
-
-    // ros ndoe init
     ros::init(argc, argv, "ros_client");
+    // ros ndoe init
     ros::NodeHandle n;
-
     //-- node commander
-    ros::Publisher commander = n.advertise<std_msgs::String>("/sim/command", 10);
-    ros::Subscriber state_feedback = n.subscribe("/sim/state", 10, analyseFeedback);
-    
+    ros::Subscriber state_feedback = n.subscribe("/robot/state", 10, analyseFeedback);
+    client_command = n.advertise<std_msgs::UInt8>("client/command", 10);
+    client_target_pose  = n.advertise<std_msgs::Float64MultiArray>("client/pose", 12);
+
     // let us dance
-    ros::Rate loop_rate(10);
-    while (ros::ok()){
-        std_msgs::String command;
-        command.data = "shoot";
-        commander.publish(command);
-        loop_rate.sleep();
-    }
+    ros::spin();
 
     return 0;
 
+}
+
+void analyseFeedback(const std_msgs::UInt8& state){
+    std::cout << "[INFO] Feedback is " << state << std::endl;
+    unsigned int  s = state.data;
+    std_msgs::Float64MultiArray pose_msg;
+    std_msgs::UInt8 command_msg;
+    switch (s)
+    {
+    case 1:
+        std::cout << "The robot is ready, fetching pointclouds data" << std::endl;
+        pose_msg.data = std::vector<double>{1.0, 0.0, 0.0, 0.6, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.12};
+        client_target_pose.publish(pose_msg);
+        //command_msg.data = 1;
+        //client_command.publish(command_msg);
+        break;
+    
+    default:
+        std::cout << "Unknown state: "<< s << std::endl;
+        break;
+    }
 }
