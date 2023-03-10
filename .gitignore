@@ -3,3 +3,4 @@ build
 .catkin_workspace
 .vscode
 src/sim_ros_interface
+.asv
